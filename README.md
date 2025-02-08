@@ -120,10 +120,6 @@ final cache = LruCache<String, int>(100, options: options);
 - Use bulk operations when possible
 - Monitor cache statistics for optimal performance
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit pull requests.
-
 ## License
 ```
 MIT License lollipopkit

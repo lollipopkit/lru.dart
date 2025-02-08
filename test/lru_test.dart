@@ -397,5 +397,33 @@ void main() {
       expect(cache.containsValue(1), isTrue);
       expect(cache.containsValue(3), isFalse);
     });
+
+    test('removeLeastUsed functionality', () {
+      final cache = LruCache<String, int>(5);
+      for (var i = 0; i < 5; i++) {
+        cache.put('key$i', i);
+      }
+      
+      // Remove 2 least used items
+      cache.removeLeastUsed(2);
+      expect(cache.length, equals(3));
+      expect(cache.fetch('key0'), isNull);
+      expect(cache.fetch('key1'), isNull);
+      expect(cache.fetch('key2'), equals(2));
+    });
+
+    test('removeLeastUsedPercent functionality', () {
+      final cache = LruCache<String, int>(10);
+      for (var i = 0; i < 10; i++) {
+        cache.put('key$i', i);
+      }
+      
+      // Remove 30% of least used items
+      cache.removeLeastUsedPercent(30);
+      expect(cache.length, equals(7));
+      
+      expect(() => cache.removeLeastUsedPercent(-1), throwsArgumentError);
+      expect(() => cache.removeLeastUsedPercent(101), throwsArgumentError);
+    });
   });
 }

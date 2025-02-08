@@ -363,6 +363,28 @@ class LruCache<K, V> {
     }
   }
 
+  /// Remove the least recently used [count] entries.
+  /// If [count] is greater than the cache size, all entries will be removed.
+  void removeLeastUsed(int count) {
+    final toRemove = count.clamp(0, length);
+    for (var i = 0; i < toRemove; i++) {
+      if (_tail != null) {
+        final key = _tail!.key;
+        remove(key);
+      }
+    }
+  }
+
+  /// Remove the least recently used entries by percentage.
+  /// [percentage] should be between 0 and 100.
+  void removeLeastUsedPercent(double percentage) {
+    if (percentage < 0 || percentage > 100) {
+      throw ArgumentError('Percentage must be between 0 and 100');
+    }
+    final count = (length * percentage / 100).round();
+    removeLeastUsed(count);
+  }
+
   /// Get the number of entries in the cache.
   int get length => _cache.length;
 
