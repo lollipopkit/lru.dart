@@ -1,4 +1,5 @@
 /// Each node in the doubly linked list.
+///
 /// It contains the key, value, and pointers to the previous and next nodes.
 final class _Node<K, V> {
   K key;
@@ -8,23 +9,27 @@ final class _Node<K, V> {
   final int createdAt;
   final EntryOptions options;
 
-  _Node(this.key, this.value, this.options) 
-      : createdAt = Stopwatch().elapsedMilliseconds;
-  
+  // Replaced per-node Stopwatch with a global one for efficiency
+  _Node(this.key, this.value, this.options)
+      : createdAt = _globalStopwatch.elapsedMilliseconds;
+
   bool get isExpired {
     if (options.maxAge == null) return false;
-    return Stopwatch().elapsedMilliseconds - createdAt > options.maxAge!;
+    return _globalStopwatch.elapsedMilliseconds - createdAt > options.maxAge!;
   }
 }
+
+/// Global stopwatch to measure elapsed time for all nodes
+final _globalStopwatch = Stopwatch()..start();
 
 /// Entry options for cache items
 final class EntryOptions {
   /// Maximum age in milliseconds
   final int? maxAge;
-  
+
   /// Weight of the entry for capacity calculations
   final int weight;
-  
+
   const EntryOptions({
     this.maxAge,
     this.weight = 1,
@@ -78,13 +83,13 @@ final class LruOptions {
 
   /// Put new items at the beginning of the list.
   final bool putNewItemFirst;
-  
+
   /// Maximum total weight of entries
   final int? maxWeight;
-  
+
   /// Default entry options
   final EntryOptions defaultEntryOptions;
-  
+
   /// Event listener
   final void Function(CacheEvent)? onEvent;
 
@@ -160,7 +165,8 @@ class LruCache<K, V> {
 
     if (node.isExpired) {
       remove(key);
-      _options.onEvent?.call(CacheEvent(CacheEventType.expired, key, node.value));
+      _options.onEvent
+          ?.call(CacheEvent(CacheEventType.expired, key, node.value));
       return null;
     }
 
@@ -179,7 +185,7 @@ class LruCache<K, V> {
   void putWithOptions(K key, V value, EntryOptions options) {
     _validateWeight(options.weight);
     final node = _Node(key, value, options);
-    
+
     if (_cache.containsKey(key)) {
       final existingNode = _cache[key]!;
       _totalWeight -= existingNode.options.weight;
@@ -194,15 +200,15 @@ class LruCache<K, V> {
 
     _totalWeight += options.weight;
     _cache[key] = node;
-    
+
     if (_options.putNewItemFirst) {
       _addToFront(node);
     } else {
       _addToBack(node);
     }
 
-    while (_cache.length > _capacity || 
-           (_options.maxWeight != null && _totalWeight > _options.maxWeight!)) {
+    while (_cache.length > _capacity ||
+        (_options.maxWeight != null && _totalWeight > _options.maxWeight!)) {
       _removeLRU();
     }
 
@@ -213,7 +219,7 @@ class LruCache<K, V> {
     if (weight <= 0) {
       throw ArgumentError('Entry weight must be positive');
     }
-    
+
     if (_options.maxWeight != null) {
       if (_totalWeight + weight > _options.maxWeight!) {
         while (_totalWeight + weight > _options.maxWeight! && !isEmpty) {
