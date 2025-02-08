@@ -258,5 +258,23 @@ void main() {
       cache.put('c', 30);
       expect(cache.values(), equals([4, 1, 30]));
     });
+
+    test('putNewItemFirst option', () {
+      final optionsFirst = LruOptions(putNewItemFirst: true);
+      final cachePutFirst = LruCache<String, int>(3, options: optionsFirst);
+      
+      cachePutFirst.put('a', 1);
+      cachePutFirst.put('b', 2);
+      cachePutFirst.put('c', 3);
+      expect(cachePutFirst.values(), equals([3, 2, 1]));
+
+      final optionsLast = LruOptions(putNewItemFirst: false);
+      final cachePutLast = LruCache<String, int>(3, options: optionsLast);
+      
+      cachePutLast.put('a', 1);
+      cachePutLast.put('b', 2);
+      cachePutLast.put('c', 3);
+      expect(cachePutLast.values(), equals([1, 2, 3]));
+    });
   });
 }

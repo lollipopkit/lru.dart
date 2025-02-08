@@ -32,11 +32,17 @@ final class LruUsageOptions {
 /// {@template lru_options}
 /// Options for the LRU cache
 /// {@endtemplate}
-class LruOptions {
+final class LruOptions {
   /// {@macro lru_usage_options}
   final LruUsageOptions usage;
 
-  const LruOptions({this.usage = const LruUsageOptions()});
+  /// Put new items at the beginning of the list.
+  final bool putNewItemFirst;
+
+  const LruOptions({
+    this.usage = const LruUsageOptions(),
+    this.putNewItemFirst = true,
+  });
 }
 
 /// A LRU cache implementation with enhanced features
@@ -48,16 +54,17 @@ class LruCache<K, V> {
   final LruOptions _options;
 
   /// Create a new LRU cache with the given [capacity]
-  LruCache(this._capacity, {LruOptions options = const LruOptions()}) 
-    : _cache = {},
-      _options = options {
+  LruCache(this._capacity, {LruOptions options = const LruOptions()})
+      : _cache = {},
+        _options = options {
     if (_capacity <= 0) {
       throw ArgumentError('Capacity must be positive');
     }
   }
 
   /// Create a LRU cache from an existing map
-  factory LruCache.fromMap(Map<K, V> map, {
+  factory LruCache.fromMap(
+    Map<K, V> map, {
     int? capacity,
     LruOptions options = const LruOptions(),
   }) {
@@ -73,7 +80,8 @@ class LruCache<K, V> {
   factory LruCache.empty({
     int capacity = 10,
     LruOptions options = const LruOptions(),
-  }) => LruCache(capacity, options: options);
+  }) =>
+      LruCache(capacity, options: options);
 
   /// Get or update capacity
   int get capacity => _capacity;
@@ -113,7 +121,11 @@ class LruCache<K, V> {
 
     final newNode = _Node(key, value);
     _cache[key] = newNode;
-    _addToFront(newNode);
+    if (_options.putNewItemFirst) {
+      _addToFront(newNode);
+    } else {
+      _addToBack(newNode);
+    }
 
     if (_cache.length > _capacity) {
       _removeLRU();
@@ -200,6 +212,19 @@ class LruCache<K, V> {
     _head = node;
 
     _tail ??= node;
+  }
+
+  /// Add a new node to the back of the list.
+  void _addToBack(_Node<K, V> node) {
+    node.prev = _tail;
+    node.next = null;
+
+    if (_tail != null) {
+      _tail!.next = node;
+    }
+    _tail = node;
+
+    _head ??= node;
   }
 
   /// Remove a node from the list.
