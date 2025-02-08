@@ -276,5 +276,121 @@ void main() {
       cachePutLast.put('c', 3);
       expect(cachePutLast.values(), equals([1, 2, 3]));
     });
+
+    test('entry expiration', () async {
+      final cache = LruCache<String, int>(
+        3, 
+        options: LruOptions(
+          defaultEntryOptions: EntryOptions(maxAge: 100),
+        ),
+      );
+      
+      cache.put('a', 1);
+      expect(cache.fetch('a'), equals(1));
+      
+      await Future.delayed(Duration(milliseconds: 150));
+      expect(cache.fetch('a'), isNull);
+      expect(cache.isEmpty, isTrue);
+    });
+
+    test('custom entry options', () {
+      final cache = LruCache<String, int>(3);
+      
+      cache.putWithOptions('a', 1, EntryOptions(weight: 2));
+      cache.putWithOptions('b', 2, EntryOptions(maxAge: 1000));
+      
+      expect(cache.length, equals(2));
+    });
+
+    test('weight limits', () {
+      final cache = LruCache<String, int>(
+        5,
+        options: LruOptions(maxWeight: 10),
+      );
+      
+      cache.putWithOptions('a', 1, EntryOptions(weight: 5));
+      cache.putWithOptions('b', 2, EntryOptions(weight: 3));
+      cache.putWithOptions('c', 3, EntryOptions(weight: 4)); // Should evict 'a'
+      
+      expect(cache.fetch('a'), isNull);
+      expect(cache.length, equals(2));
+    });
+
+    test('event notifications', () {
+      var events = <CacheEvent>[];
+      final cache = LruCache<String, int>(
+        2,
+        options: LruOptions(
+          onEvent: (event) => events.add(event),
+        ),
+      );
+      
+      cache.put('a', 1);
+      expect(events.last.type, equals(CacheEventType.add));
+      
+      cache.put('a', 2);
+      expect(events.last.type, equals(CacheEventType.update));
+      
+      cache.remove('a');
+      expect(events.last.type, equals(CacheEventType.remove));
+      
+      cache.putWithOptions('b', 1, EntryOptions(maxAge: 1));
+      events.clear();
+      
+      // Wait for expiration
+      Future.delayed(Duration(milliseconds: 2), () {
+        cache.fetch('b');
+        expect(events.last.type, equals(CacheEventType.expired));
+      });
+    });
+
+    test('mixed expiration times', () async {
+      final cache = LruCache<String, int>(3);
+      
+      cache.putWithOptions('a', 1, EntryOptions(maxAge: 50));
+      cache.putWithOptions('b', 2, EntryOptions(maxAge: 150));
+      cache.putWithOptions('c', 3, EntryOptions(maxAge: 250));
+      
+      await Future.delayed(Duration(milliseconds: 100));
+      expect(cache.fetch('a'), isNull);
+      expect(cache.fetch('b'), equals(2));
+      expect(cache.fetch('c'), equals(3));
+      
+      await Future.delayed(Duration(milliseconds: 100));
+      expect(cache.fetch('b'), isNull);
+      expect(cache.fetch('c'), equals(3));
+    });
+
+    test('weight based eviction order', () {
+      final cache = LruCache<String, int>(
+        5,
+        options: LruOptions(maxWeight: 10),
+      );
+      
+      cache.putWithOptions('a', 1, EntryOptions(weight: 3));
+      cache.putWithOptions('b', 2, EntryOptions(weight: 3));
+      cache.putWithOptions('c', 3, EntryOptions(weight: 3));
+      cache.putWithOptions('d', 4, EntryOptions(weight: 3));
+      
+      expect(cache.length, equals(3));
+      expect(cache.fetch('a'), isNull);
+    });
+
+    test('error conditions', () {
+      final cache = LruCache<String, int>(2);
+      
+      expect(() => cache.putWithOptions(
+        'a', 
+        1, 
+        EntryOptions(weight: -1)
+      ), throwsArgumentError);
+      
+      expect(() => cache.capacity = -1, throwsArgumentError);
+      
+      expect(() => LruCache<String, int>(
+        2,
+        options: LruOptions(maxWeight: -1),
+      ), throwsArgumentError);
+    });
   });
 }

@@ -1,18 +1,35 @@
 import 'package:lru/lru.dart';
 
 void main() async {
-  // Create with custom options
+  // Create with advanced options
   final options = LruOptions(
-    usage: LruUsageOptions(
-      fetchAddsUsage: true,
-      putAddsUsage: false,
-      updateAddsUsage: true
-    ),
-    putNewItemFirst: false
+    maxWeight: 10,
+    defaultEntryOptions: EntryOptions(maxAge: 5000), // 5 seconds
+    onEvent: (event) {
+      print('Cache event: ${event.type} - Key: ${event.key}');
+    }
   );
   
-  // Initialize cache
   final cache = LruCache<String, int>(5, options: options);
+  
+  // Add entry with custom options
+  cache.putWithOptions('large', 100, EntryOptions(weight: 5));
+  
+  // Add entry with default max age
+  cache.put('temp', 200);
+  
+  print('Initial: ${cache.toMap()}');
+  
+  // Wait for expiration
+  await Future.delayed(Duration(seconds: 6));
+  print('After expiration: ${cache.toMap()}');
+  
+  // Test weight limits
+  cache.putWithOptions('w1', 1, EntryOptions(weight: 4));
+  cache.putWithOptions('w2', 2, EntryOptions(weight: 4));
+  cache.putWithOptions('w3', 3, EntryOptions(weight: 4)); // Will trigger eviction
+  
+  print('After weight limit: ${cache.toMap()}');
   
   // Basic operations
   cache.put('a', 1);

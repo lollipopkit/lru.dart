@@ -9,6 +9,10 @@ A feature-rich Least Recently Used (LRU) cache implementation in Dart.
 - Customizable usage tracking
 - Cache statistics
 - Support for copying and capacity adjustment
+- Entry-level options (max age, weight)
+- Weight-based capacity limits
+- Event notifications
+- Automatic expiration
 
 ## Installation
 
@@ -45,6 +49,26 @@ final options = LruOptions(
   putNewItemFirst: true
 );
 final customCache = LruCache<String, int>(10, options: options);
+
+// Advanced options
+final options = LruOptions(
+  maxWeight: 100,
+  defaultEntryOptions: EntryOptions(
+    maxAge: 5000, // 5 seconds
+    weight: 1
+  ),
+  onEvent: (event) {
+    print('Cache event: ${event.type}');
+  }
+);
+
+final cache = LruCache<String, int>(5, options: options);
+
+// Add heavy item
+cache.putWithOptions('large', 100, EntryOptions(weight: 5));
+
+// Add temporary item
+cache.putWithOptions('temp', 200, EntryOptions(maxAge: 1000));
 ```
 
 ## API Reference
@@ -66,3 +90,16 @@ final customCache = LruCache<String, int>(10, options: options);
 - `update(K key, V Function(V) update)` - Update existing value
 - `copy()` - Create cache copy
 - `clear()` - Remove all entries
+
+### EntryOptions
+
+- `maxAge` - Entry lifetime in milliseconds
+- `weight` - Entry weight for capacity calculations
+
+### Events
+
+Cache events are emitted for:
+- Entry addition
+- Entry updates
+- Entry removal
+- Entry expiration

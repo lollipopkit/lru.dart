@@ -5,8 +5,47 @@ final class _Node<K, V> {
   V value;
   _Node<K, V>? prev;
   _Node<K, V>? next;
+  final DateTime created;
+  final EntryOptions options;
 
-  _Node(this.key, this.value);
+  _Node(this.key, this.value, this.options) : created = DateTime.now();
+  
+  bool get isExpired {
+    if (options.maxAge == null) return false;
+    return DateTime.now().difference(created).inMilliseconds > options.maxAge!;
+  }
+}
+
+/// Entry options for cache items
+final class EntryOptions {
+  /// Maximum age in milliseconds
+  final int? maxAge;
+  
+  /// Weight of the entry for capacity calculations
+  final int weight;
+  
+  const EntryOptions({
+    this.maxAge,
+    this.weight = 1,
+  });
+}
+
+/// Cache event types
+enum CacheEventType {
+  add,
+  update,
+  remove,
+  expired,
+}
+
+/// Cache event data
+class CacheEvent<K, V> {
+  final CacheEventType type;
+  final K key;
+  final V? value;
+  final DateTime timestamp;
+
+  CacheEvent(this.type, this.key, this.value) : timestamp = DateTime.now();
 }
 
 /// {@template lru_usage_options}
@@ -38,10 +77,22 @@ final class LruOptions {
 
   /// Put new items at the beginning of the list.
   final bool putNewItemFirst;
+  
+  /// Maximum total weight of entries
+  final int? maxWeight;
+  
+  /// Default entry options
+  final EntryOptions defaultEntryOptions;
+  
+  /// Event listener
+  final void Function(CacheEvent)? onEvent;
 
   const LruOptions({
     this.usage = const LruUsageOptions(),
     this.putNewItemFirst = true,
+    this.maxWeight,
+    this.defaultEntryOptions = const EntryOptions(),
+    this.onEvent,
   });
 }
 
@@ -59,6 +110,9 @@ class LruCache<K, V> {
         _options = options {
     if (_capacity <= 0) {
       throw ArgumentError('Capacity must be positive');
+    }
+    if (_options.maxWeight != null && _options.maxWeight! <= 0) {
+      throw ArgumentError('Max weight must be positive');
     }
   }
 
@@ -102,6 +156,12 @@ class LruCache<K, V> {
     final node = _cache[key];
     if (node == null) return null;
 
+    if (node.isExpired) {
+      remove(key);
+      _options.onEvent?.call(CacheEvent(CacheEventType.expired, key, node.value));
+      return null;
+    }
+
     if (_options.usage.fetchAddsUsage) {
       _moveToFront(node);
     }
@@ -110,26 +170,54 @@ class LruCache<K, V> {
 
   /// Put a new key-value pair.
   void put(K key, V value) {
+    putWithOptions(key, value, _options.defaultEntryOptions);
+  }
+
+  /// Put with custom options
+  void putWithOptions(K key, V value, EntryOptions options) {
+    _validateWeight(options.weight);
+    final node = _Node(key, value, options);
     if (_cache.containsKey(key)) {
-      final node = _cache[key]!;
-      node.value = value;
+      final existingNode = _cache[key]!;
+      existingNode.value = value;
       if (_options.usage.putAddsUsage) {
-        _moveToFront(node);
+        _moveToFront(existingNode);
       }
+      _options.onEvent?.call(CacheEvent(CacheEventType.update, key, value));
       return;
     }
 
-    final newNode = _Node(key, value);
-    _cache[key] = newNode;
+    _cache[key] = node;
     if (_options.putNewItemFirst) {
-      _addToFront(newNode);
+      _addToFront(node);
     } else {
-      _addToBack(newNode);
+      _addToBack(node);
     }
 
     if (_cache.length > _capacity) {
       _removeLRU();
     }
+
+    _options.onEvent?.call(CacheEvent(CacheEventType.add, key, value));
+  }
+
+  void _validateWeight(int weight) {
+    if (weight <= 0) {
+      throw ArgumentError('Entry weight must be positive');
+    }
+    
+    if (_options.maxWeight != null) {
+      final currentWeight = _getCurrentWeight();
+      if (currentWeight + weight > _options.maxWeight!) {
+        while (_getCurrentWeight() + weight > _options.maxWeight!) {
+          _removeLRU();
+        }
+      }
+    }
+  }
+
+  int _getCurrentWeight() {
+    return _cache.values.fold(0, (sum, node) => sum + node.options.weight);
   }
 
   /// Get the value or compute it if absent
@@ -159,6 +247,7 @@ class LruCache<K, V> {
 
     _removeNode(node);
     _cache.remove(key);
+    _options.onEvent?.call(CacheEvent(CacheEventType.remove, key, node.value));
     return node.value;
   }
 
@@ -174,6 +263,7 @@ class LruCache<K, V> {
     if (_options.usage.updateAddsUsage) {
       _moveToFront(node);
     }
+    _options.onEvent?.call(CacheEvent(CacheEventType.update, key, node.value));
     return true;
   }
 
