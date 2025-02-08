@@ -2,9 +2,9 @@ import 'package:lru/lru.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('LRUCache', () {
+  group('LruCache', () {
     test('basic operations', () {
-      final cache = LRUCache<String, int>(2);
+      final cache = LruCache<String, int>(2);
       
       cache.put('a', 1);
       expect(cache.fetch('a'), equals(1));
@@ -18,7 +18,7 @@ void main() {
     });
 
     test('capacity enforcement', () {
-      final cache = LRUCache<String, int>(2);
+      final cache = LruCache<String, int>(2);
       
       cache.put('a', 1);
       cache.put('b', 2);
@@ -29,7 +29,7 @@ void main() {
     });
 
     test('update existing value', () {
-      final cache = LRUCache<String, int>(2);
+      final cache = LruCache<String, int>(2);
       
       cache.put('a', 1);
       cache.put('b', 2);
@@ -40,12 +40,12 @@ void main() {
     });
 
     test('invalid capacity', () {
-      expect(() => LRUCache<String, int>(0), 
+      expect(() => LruCache<String, int>(0), 
         throwsA(isA<ArgumentError>()));
     });
 
     test('empty cache operations', () {
-      final cache = LRUCache<String, int>(2);
+      final cache = LruCache<String, int>(2);
       
       expect(cache.isEmpty, isTrue);
       expect(cache.isNotEmpty, isFalse);
@@ -55,7 +55,7 @@ void main() {
 
     test('fromMap constructor', () {
       final map = {'a': 1, 'b': 2, 'c': 3};
-      final cache = LRUCache.fromMap(map, capacity: 5);
+      final cache = LruCache.fromMap(map, capacity: 5);
       
       expect(cache.length, equals(3));
       expect(cache.capacity, equals(5));
@@ -64,13 +64,13 @@ void main() {
     });
 
     test('empty constructor', () {
-      final cache = LRUCache.empty();
+      final cache = LruCache.empty();
       expect(cache.capacity, equals(10));
       expect(cache.isEmpty, isTrue);
     });
 
     test('capacity adjustment', () {
-      final cache = LRUCache<String, int>(5);
+      final cache = LruCache<String, int>(5);
       cache.put('a', 1);
       cache.put('b', 2);
       cache.put('c', 3);
@@ -83,7 +83,7 @@ void main() {
     });
 
     test('getOrAdd functionality', () {
-      final cache = LRUCache<String, int>(2);
+      final cache = LruCache<String, int>(2);
       var computeCalls = 0;
       
       final value = cache.getOrAdd('a', () {
@@ -104,7 +104,7 @@ void main() {
     });
 
     test('async operations', () async {
-      final cache = LRUCache<String, int>(2);
+      final cache = LruCache<String, int>(2);
       
       final value = await cache.getOrAddAsync('a', () async {
         await Future.delayed(Duration(milliseconds: 10));
@@ -116,7 +116,7 @@ void main() {
     });
 
     test('update operations', () {
-      final cache = LRUCache<String, int>(2);
+      final cache = LruCache<String, int>(2);
       cache.put('a', 1);
       
       final updated = cache.update('a', (v) => v * 2);
@@ -128,7 +128,7 @@ void main() {
     });
 
     test('entries iteration', () {
-      final cache = LRUCache<String, int>(3);
+      final cache = LruCache<String, int>(3);
       cache.put('a', 1);
       cache.put('b', 2);
       
@@ -138,7 +138,7 @@ void main() {
     });
 
     test('cache statistics', () {
-      final cache = LRUCache<String, int>(4);
+      final cache = LruCache<String, int>(4);
       cache.put('a', 1);
       cache.put('b', 2);
       
@@ -149,7 +149,7 @@ void main() {
     });
 
     test('copy operation', () {
-      final original = LRUCache<String, int>(3);
+      final original = LruCache<String, int>(3);
       original.put('a', 1);
       original.put('b', 2);
       
@@ -163,7 +163,7 @@ void main() {
     });
 
     test('concurrent modifications', () async {
-      final cache = LRUCache<String, int>(100);
+      final cache = LruCache<String, int>(100);
       final futures = <Future>[];
       
       for (var i = 0; i < 100; i++) {
@@ -178,7 +178,7 @@ void main() {
     });
 
     test('stress test', () {
-      final cache = LRUCache<int, int>(1000);
+      final cache = LruCache<int, int>(1000);
       final stopwatch = Stopwatch()..start();
       
       for (var i = 0; i < 10000; i++) {
@@ -192,7 +192,7 @@ void main() {
     });
 
     test('edge cases', () {
-      final cache = LRUCache<String, int>(2);
+      final cache = LruCache<String, int>(2);
       
       cache.put('', 0);
       expect(cache.fetch(''), equals(0));
@@ -203,6 +203,60 @@ void main() {
       cache.clear();
       expect(cache.isEmpty, isTrue);
       expect(cache.capacity, equals(2));
+    });
+
+    test('custom usage options', () {
+      final options = LruOptions(
+        usage: LruUsageOptions(
+          fetchAddsUsage: false,
+          putAddsUsage: false,
+          updateAddsUsage: false,
+        ),
+      );
+      final cache = LruCache<String, int>(3, options: options);
+      
+      cache.put('a', 1);
+      cache.put('b', 2);
+      cache.put('c', 3);
+      
+      // Fetch shouldn't affect order
+      cache.fetch('a');
+      expect(cache.values(), equals([3, 2, 1]));
+      
+      // Update shouldn't affect order
+      cache.update('b', (v) => v * 2);
+      expect(cache.values(), equals([3, 4, 1]));
+      
+      // Put existing shouldn't affect order
+      cache.put('a', 10);
+      expect(cache.values(), equals([3, 4, 10]));
+    });
+
+    test('partial usage options', () {
+      final options = LruOptions(
+        usage: LruUsageOptions(
+          fetchAddsUsage: true,
+          putAddsUsage: false,
+          updateAddsUsage: true,
+        ),
+      );
+      final cache = LruCache<String, int>(3, options: options);
+      
+      cache.put('a', 1);
+      cache.put('b', 2);
+      cache.put('c', 3);
+      
+      // Fetch should affect order
+      cache.fetch('a');
+      expect(cache.values(), equals([1, 3, 2]));
+      
+      // Update should affect order
+      cache.update('b', (v) => v * 2);
+      expect(cache.values(), equals([4, 1, 3]));
+      
+      // Put existing shouldn't affect order
+      cache.put('c', 30);
+      expect(cache.values(), equals([4, 1, 30]));
     });
   });
 }

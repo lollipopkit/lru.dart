@@ -1,37 +1,79 @@
 /// Each node in the doubly linked list.
 /// It contains the key, value, and pointers to the previous and next nodes.
-class Node<K, V> {
+final class _Node<K, V> {
   K key;
   V value;
-  Node<K, V>? prev;
-  Node<K, V>? next;
+  _Node<K, V>? prev;
+  _Node<K, V>? next;
 
-  Node(this.key, this.value);
+  _Node(this.key, this.value);
+}
+
+/// {@template lru_usage_options}
+/// Usage options for the LRU cache
+/// {@endtemplate}
+final class LruUsageOptions {
+  /// Fetch operation increases items' usage, so they are less likely to be removed
+  final bool fetchAddsUsage;
+
+  /// Put operation increases items' usage, so they are less likely to be removed
+  final bool putAddsUsage;
+
+  /// Update operation increases items' usage, so they are less likely to be removed
+  final bool updateAddsUsage;
+
+  const LruUsageOptions({
+    this.fetchAddsUsage = true,
+    this.putAddsUsage = true,
+    this.updateAddsUsage = true,
+  });
+}
+
+/// {@template lru_options}
+/// Options for the LRU cache
+/// {@endtemplate}
+class LruOptions {
+  /// {@macro lru_usage_options}
+  final LruUsageOptions usage;
+
+  const LruOptions({this.usage = const LruUsageOptions()});
 }
 
 /// A LRU cache implementation with enhanced features
-class LRUCache<K, V> {
+class LruCache<K, V> {
   int _capacity;
-  final Map<K, Node<K, V>> _cache;
-  Node<K, V>? _head;
-  Node<K, V>? _tail;
-  
+  final Map<K, _Node<K, V>> _cache;
+  _Node<K, V>? _head;
+  _Node<K, V>? _tail;
+  final LruOptions _options;
+
   /// Create a new LRU cache with the given [capacity]
-  LRUCache(this._capacity) : _cache = {} {
+  LruCache(this._capacity, {LruOptions options = const LruOptions()}) 
+    : _cache = {},
+      _options = options {
     if (_capacity <= 0) {
       throw ArgumentError('Capacity must be positive');
     }
   }
 
   /// Create a LRU cache from an existing map
-  factory LRUCache.fromMap(Map<K, V> map, {int? capacity}) {
-    final cache = LRUCache<K, V>(capacity ?? map.length);
+  factory LruCache.fromMap(Map<K, V> map, {
+    int? capacity,
+    LruOptions options = const LruOptions(),
+  }) {
+    final cache = LruCache<K, V>(
+      capacity ?? map.length,
+      options: options,
+    );
     map.forEach(cache.put);
     return cache;
   }
 
   /// Create an empty LRU cache with default capacity
-  factory LRUCache.empty({int capacity = 10}) => LRUCache(capacity);
+  factory LruCache.empty({
+    int capacity = 10,
+    LruOptions options = const LruOptions(),
+  }) => LruCache(capacity, options: options);
 
   /// Get or update capacity
   int get capacity => _capacity;
@@ -52,7 +94,9 @@ class LRUCache<K, V> {
     final node = _cache[key];
     if (node == null) return null;
 
-    _moveToFront(node);
+    if (_options.usage.fetchAddsUsage) {
+      _moveToFront(node);
+    }
     return node.value;
   }
 
@@ -61,11 +105,13 @@ class LRUCache<K, V> {
     if (_cache.containsKey(key)) {
       final node = _cache[key]!;
       node.value = value;
-      _moveToFront(node);
+      if (_options.usage.putAddsUsage) {
+        _moveToFront(node);
+      }
       return;
     }
 
-    final newNode = Node(key, value);
+    final newNode = _Node(key, value);
     _cache[key] = newNode;
     _addToFront(newNode);
 
@@ -78,7 +124,7 @@ class LRUCache<K, V> {
   V getOrAdd(K key, V Function() ifAbsent) {
     final value = fetch(key);
     if (value != null) return value;
-    
+
     final newValue = ifAbsent();
     put(key, newValue);
     return newValue;
@@ -88,7 +134,7 @@ class LRUCache<K, V> {
   Future<V> getOrAddAsync(K key, Future<V> Function() ifAbsent) async {
     final value = fetch(key);
     if (value != null) return value;
-    
+
     final newValue = await ifAbsent();
     put(key, newValue);
     return newValue;
@@ -98,7 +144,7 @@ class LRUCache<K, V> {
   V? remove(K key) {
     final node = _cache[key];
     if (node == null) return null;
-    
+
     _removeNode(node);
     _cache.remove(key);
     return node.value;
@@ -111,9 +157,11 @@ class LRUCache<K, V> {
   bool update(K key, V Function(V) update) {
     final node = _cache[key];
     if (node == null) return false;
-    
+
     node.value = update(node.value);
-    _moveToFront(node);
+    if (_options.usage.updateAddsUsage) {
+      _moveToFront(node);
+    }
     return true;
   }
 
@@ -128,13 +176,13 @@ class LRUCache<K, V> {
 
   /// Get cache statistics
   Map<String, num> stats() => {
-    'capacity': capacity,
-    'size': length,
-    'usage': length / capacity,
-  };
+        'capacity': capacity,
+        'size': length,
+        'usage': length / capacity,
+      };
 
   /// Move the node to the front of the list.
-  void _moveToFront(Node<K, V> node) {
+  void _moveToFront(_Node<K, V> node) {
     if (node == _head) return;
 
     _removeNode(node);
@@ -142,7 +190,7 @@ class LRUCache<K, V> {
   }
 
   /// Add a new node to the front of the list.
-  void _addToFront(Node<K, V> node) {
+  void _addToFront(_Node<K, V> node) {
     node.next = _head;
     node.prev = null;
 
@@ -155,7 +203,7 @@ class LRUCache<K, V> {
   }
 
   /// Remove a node from the list.
-  void _removeNode(Node<K, V> node) {
+  void _removeNode(_Node<K, V> node) {
     if (node.prev != null) {
       node.prev!.next = node.next;
     } else {
@@ -227,8 +275,8 @@ class LRUCache<K, V> {
   }
 
   /// Create a copy of this cache
-  LRUCache<K, V> copy() {
-    final newCache = LRUCache<K, V>(_capacity);
+  LruCache<K, V> copy() {
+    final newCache = LruCache<K, V>(_capacity);
     var current = _tail;
     while (current != null) {
       newCache.put(current.key, current.value);

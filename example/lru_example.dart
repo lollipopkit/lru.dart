@@ -3,7 +3,7 @@ import 'package:lru/lru.dart';
 void main() async {
   // Create from existing map
   final initial = {'a': 1, 'b': 2, 'c': 3};
-  final cache = LRUCache.fromMap(initial, capacity: 5);
+  final cache = LruCache.fromMap(initial, capacity: 5);
   print('Initial cache: ${cache.values()}');
 
   // Use getOrAdd
