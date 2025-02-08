@@ -1,105 +1,130 @@
-# LRU Cache for Dart
+English | [简体中文](./README.zh.md)
 
-A feature-rich Least Recently Used (LRU) cache implementation in Dart.
+# LRU
+
+A Least Recently Used (LRU) cache implementation in Dart.
 
 ## Features
 
-- Fixed-size cache with LRU eviction
-- Synchronous and asynchronous value computation
-- Customizable usage tracking
-- Cache statistics
-- Support for copying and capacity adjustment
-- Entry-level options (max age, weight)
-- Weight-based capacity limits
-- Event notifications
-- Automatic expiration
+- Fixed-size cache with LRU eviction policy
+- Weight-based capacity management
+- Entry expiration with configurable TTL
+- Event notifications for cache operations
 
-## Installation
-
-```yaml
-dependencies:
-  lru: ^1.0.0
-```
-
-## Usage
+## Quick Start
 
 ```dart
-// Create cache
+// Create a simple cache
 final cache = LruCache<String, int>(5);
 
 // Basic operations
 cache.put('key', 100);
-final value = cache.fetch('key');
+final value = cache.fetch('key');  // Returns 100
+cache.remove('key');               // Removes the entry
 
-// Compute value if absent
-final computed = cache.getOrAdd('key2', () => 200);
+// Check existence
+if (cache.containsKey('key')) {
+  // Key exists
+}
 
-// Async computation
-final asyncValue = await cache.getOrAddAsync('key3', () async {
-  await Future.delayed(Duration(seconds: 1));
-  return 300;
-});
-
-// Customize behavior
-final options = LruOptions(
-  usage: LruUsageOptions(
-    fetchAddsUsage: true,
-    putAddsUsage: true
-  ),
-  putNewItemFirst: true
-);
-final customCache = LruCache<String, int>(10, options: options);
-
-// Advanced options
-final options = LruOptions(
-  maxWeight: 100,
-  defaultEntryOptions: EntryOptions(
-    maxAge: 5000, // 5 seconds
-    weight: 1
-  ),
-  onEvent: (event) {
-    print('Cache event: ${event.type}');
-  }
-);
-
-final cache = LruCache<String, int>(5, options: options);
-
-// Add heavy item
-cache.putWithOptions('large', 100, EntryOptions(weight: 5));
-
-// Add temporary item
-cache.putWithOptions('temp', 200, EntryOptions(maxAge: 1000));
+// Get all entries
+final values = cache.values();
+final keys = cache.keys();
 ```
 
-## API Reference
+## Advanced Usage
 
-### Constructor Options
+### Automatic Value Computation
 
-- `capacity` - Maximum number of items in cache
-- `LruOptions` - Customize cache behavior:
-  - `usage` - Control when items are marked as used
-  - `putNewItemFirst` - Control item insertion position
+```dart
+// Compute value if absent
+final value = cache.getOrAdd('key', () {
+  return computeExpensiveValue();
+});
 
-### Methods
+// Async computation
+final value = await cache.getOrAddAsync('key', () async {
+  return await fetchValueFromNetwork();
+});
+```
 
-- `fetch(K key)` - Get value by key
-- `put(K key, V value)` - Add or update value
-- `getOrAdd(K key, V Function() ifAbsent)` - Get or compute value
-- `getOrAddAsync(K key, Future<V> Function() ifAbsent)` - Async get or compute
-- `remove(K key)` - Remove entry
-- `update(K key, V Function(V) update)` - Update existing value
-- `copy()` - Create cache copy
-- `clear()` - Remove all entries
+### Weight-Based Eviction
 
-### EntryOptions
+```dart
+final options = LruOptions(
+  maxWeight: 1000,
+  defaultEntryOptions: EntryOptions(weight: 1)
+);
 
-- `maxAge` - Entry lifetime in milliseconds
-- `weight` - Entry weight for capacity calculations
+final cache = LruCache<String, int>(50, options: options);
 
-### Events
+// Add heavy items
+cache.putWithOptions('large', 100, EntryOptions(weight: 10));
+cache.putWithOptions('small', 200, EntryOptions(weight: 1));
+```
 
-Cache events are emitted for:
-- Entry addition
-- Entry updates
-- Entry removal
-- Entry expiration
+### Entry Expiration
+
+```dart
+// Global expiration
+final cache = LruCache<String, int>(100, 
+  options: LruOptions(
+    defaultEntryOptions: EntryOptions(maxAge: 5000) // 5 seconds
+  )
+);
+
+// Per-entry expiration
+cache.putWithOptions('temp', 100, 
+  EntryOptions(maxAge: 1000) // 1 second
+);
+```
+
+### Event Handling
+
+```dart
+final cache = LruCache<String, int>(100,
+  options: LruOptions(
+    onEvent: (event) {
+      switch (event.type) {
+        case CacheEventType.add:
+          print('Added: ${event.key} = ${event.value}');
+          break;
+        case CacheEventType.expired:
+          print('Expired: ${event.key}');
+          break;
+      }
+    }
+  )
+);
+```
+
+### Custom Usage Tracking
+
+```dart
+final options = LruOptions(
+  usage: LruUsageOptions(
+    fetchAddsUsage: true,    // Access updates position
+    putAddsUsage: false,     // Put doesn't update position
+    updateAddsUsage: true    // Update updates position
+  )
+);
+
+final cache = LruCache<String, int>(100, options: options);
+```
+
+## Performance Tips
+
+- Use appropriate capacity based on your memory constraints
+- Configure weights for better memory management
+- Consider disabling usage tracking for write-heavy scenarios
+- Use bulk operations when possible
+- Monitor cache statistics for optimal performance
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit pull requests.
+
+## License
+```
+MIT License lollipopkit
+```
