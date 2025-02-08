@@ -77,7 +77,7 @@ final class LruUsageOptions {
 /// {@template lru_options}
 /// Options for the LRU cache
 /// {@endtemplate}
-final class LruOptions {
+final class LruOptions<K, V> {
   /// {@macro lru_usage_options}
   final LruUsageOptions usage;
 
@@ -91,7 +91,7 @@ final class LruOptions {
   final EntryOptions defaultEntryOptions;
 
   /// Event listener
-  final void Function(CacheEvent)? onEvent;
+  final void Function(CacheEvent<K, V>)? onEvent;
 
   const LruOptions({
     this.usage = const LruUsageOptions(),
@@ -108,11 +108,11 @@ class LruCache<K, V> {
   final Map<K, _Node<K, V>> _cache;
   _Node<K, V>? _head;
   _Node<K, V>? _tail;
-  final LruOptions _options;
+  final LruOptions<K, V> _options;
   int _totalWeight = 0;
 
   /// Create a new LRU cache with the given [capacity]
-  LruCache(this._capacity, {LruOptions options = const LruOptions()})
+  LruCache(this._capacity, {LruOptions<K, V> options = const LruOptions()})
       : _cache = {},
         _options = options {
     if (_capacity <= 0) {
@@ -127,7 +127,7 @@ class LruCache<K, V> {
   factory LruCache.fromMap(
     Map<K, V> map, {
     int? capacity,
-    LruOptions options = const LruOptions(),
+    LruOptions<K, V> options = const LruOptions(),
   }) {
     final cache = LruCache<K, V>(
       capacity ?? map.length,
@@ -140,7 +140,7 @@ class LruCache<K, V> {
   /// Create an empty LRU cache with default capacity
   factory LruCache.empty({
     int capacity = 10,
-    LruOptions options = const LruOptions(),
+    LruOptions<K, V> options = const LruOptions(),
   }) =>
       LruCache(capacity, options: options);
 
@@ -263,6 +263,18 @@ class LruCache<K, V> {
 
   /// Contains key check
   bool containsKey(K key) => _cache.containsKey(key);
+
+  /// Contains value check
+  bool containsValue(V value) {
+    var current = _head;
+    while (current != null) {
+      if (current.value == value) {
+        return true;
+      }
+      current = current.next;
+    }
+    return false;
+  }
 
   /// Update value if exists
   bool update(K key, V Function(V) update) {

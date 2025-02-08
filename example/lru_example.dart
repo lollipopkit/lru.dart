@@ -2,7 +2,7 @@ import 'package:lru/lru.dart';
 
 void main() async {
   // Create with advanced options
-  final options = LruOptions(
+  final options = LruOptions<String, int>(
     maxWeight: 10,
     defaultEntryOptions: EntryOptions(maxAge: 5000), // 5 seconds
     onEvent: (event) {

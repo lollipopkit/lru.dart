@@ -163,7 +163,7 @@ void main() {
 
     test('concurrent modifications', () async {
       final cache = LruCache<String, int>(100);
-      final futures = <Future>[];
+      final futures = <Future<void>>[];
 
       for (var i = 0; i < 100; i++) {
         futures.add(Future(() {
@@ -205,7 +205,7 @@ void main() {
     });
 
     test('custom usage options', () {
-      final options = LruOptions(
+      final options = LruOptions<String, int>(
         usage: LruUsageOptions(
           fetchAddsUsage: false,
           putAddsUsage: false,
@@ -232,7 +232,7 @@ void main() {
     });
 
     test('partial usage options', () {
-      final options = LruOptions(
+      final options = LruOptions<String, int>(
         usage: LruUsageOptions(
           fetchAddsUsage: true,
           putAddsUsage: false,
@@ -259,7 +259,7 @@ void main() {
     });
 
     test('putNewItemFirst option', () {
-      final optionsFirst = LruOptions(putNewItemFirst: true);
+      final optionsFirst = LruOptions<String, int>(putNewItemFirst: true);
       final cachePutFirst = LruCache<String, int>(3, options: optionsFirst);
 
       cachePutFirst.put('a', 1);
@@ -267,7 +267,7 @@ void main() {
       cachePutFirst.put('c', 3);
       expect(cachePutFirst.values(), equals([3, 2, 1]));
 
-      final optionsLast = LruOptions(putNewItemFirst: false);
+      final optionsLast = LruOptions<String, int>(putNewItemFirst: false);
       final cachePutLast = LruCache<String, int>(3, options: optionsLast);
 
       cachePutLast.put('a', 1);
@@ -316,7 +316,7 @@ void main() {
     });
 
     test('event notifications', () async {
-      var events = <CacheEvent>[];
+      final events = <CacheEvent<String, int>>[];
       final cache = LruCache<String, int>(
         2,
         options: LruOptions(onEvent: events.add),
@@ -386,6 +386,16 @@ void main() {
                 options: LruOptions(maxWeight: -1),
               ),
           throwsArgumentError);
+    });
+
+    test('containsValue test', () {
+      final cache = LruCache<String, int>(3);
+
+      cache.put('a', 1);
+      cache.put('b', 2);
+
+      expect(cache.containsValue(1), isTrue);
+      expect(cache.containsValue(3), isFalse);
     });
   });
 }

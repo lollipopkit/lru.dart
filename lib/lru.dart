@@ -1,8 +1,10 @@
-/// Support for doing something awesome.
-///
-/// More dartdocs go here.
-library;
+/// LRU Cache library.
+library lru;
 
-export 'src/lru_base.dart';
-
-// TODO: Export any libraries intended for clients of this package.
+export 'src/lru_base.dart' show 
+    LruCache,
+    LruOptions,
+    LruUsageOptions,
+    EntryOptions,
+    CacheEvent,
+    CacheEventType;

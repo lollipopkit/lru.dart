@@ -13,16 +13,24 @@
 
 include: package:lints/recommended.yaml
 
-# Uncomment the following section to specify additional rules.
+analyzer:
+  language:
+    strict-casts: true
+    strict-raw-types: true
 
-# linter:
-#   rules:
-#     - camel_case_types
-
-# analyzer:
-#   exclude:
-#     - path/to/excluded/files/**
-
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_empty_else
+    - cancel_subscriptions
+    - close_sinks
+    - comment_references
+    - prefer_final_fields
+    - prefer_final_locals
+    - test_types_in_equals
+    - throw_in_finally
+    - unawaited_futures
+    - use_key_in_widget_constructors
 # For more information about the core and recommended set of lints, see
 # https://dart.dev/go/core-lints
 

@@ -86,7 +86,7 @@ void main() {
     // Important for multi-threaded environments
     test('Concurrent Operations Performance', () async {
       final cache = LruCache<int, int>(1000);
-      final futures = <Future>[];
+      final futures = <Future<void>>[];
 
       runBenchmark('Concurrent Operations', () {
         for (var i = 0; i < 1000; i++) {
