@@ -5,14 +5,15 @@ final class _Node<K, V> {
   V value;
   _Node<K, V>? prev;
   _Node<K, V>? next;
-  final DateTime created;
+  final int createdAt;
   final EntryOptions options;
 
-  _Node(this.key, this.value, this.options) : created = DateTime.now();
+  _Node(this.key, this.value, this.options) 
+      : createdAt = Stopwatch().elapsedMilliseconds;
   
   bool get isExpired {
     if (options.maxAge == null) return false;
-    return DateTime.now().difference(created).inMilliseconds > options.maxAge!;
+    return Stopwatch().elapsedMilliseconds - createdAt > options.maxAge!;
   }
 }
 
@@ -103,6 +104,7 @@ class LruCache<K, V> {
   _Node<K, V>? _head;
   _Node<K, V>? _tail;
   final LruOptions _options;
+  int _totalWeight = 0;
 
   /// Create a new LRU cache with the given [capacity]
   LruCache(this._capacity, {LruOptions options = const LruOptions()})
@@ -177,24 +179,30 @@ class LruCache<K, V> {
   void putWithOptions(K key, V value, EntryOptions options) {
     _validateWeight(options.weight);
     final node = _Node(key, value, options);
+    
     if (_cache.containsKey(key)) {
       final existingNode = _cache[key]!;
+      _totalWeight -= existingNode.options.weight;
       existingNode.value = value;
       if (_options.usage.putAddsUsage) {
         _moveToFront(existingNode);
       }
+      _totalWeight += options.weight;
       _options.onEvent?.call(CacheEvent(CacheEventType.update, key, value));
       return;
     }
 
+    _totalWeight += options.weight;
     _cache[key] = node;
+    
     if (_options.putNewItemFirst) {
       _addToFront(node);
     } else {
       _addToBack(node);
     }
 
-    if (_cache.length > _capacity) {
+    while (_cache.length > _capacity || 
+           (_options.maxWeight != null && _totalWeight > _options.maxWeight!)) {
       _removeLRU();
     }
 
@@ -207,17 +215,12 @@ class LruCache<K, V> {
     }
     
     if (_options.maxWeight != null) {
-      final currentWeight = _getCurrentWeight();
-      if (currentWeight + weight > _options.maxWeight!) {
-        while (_getCurrentWeight() + weight > _options.maxWeight!) {
+      if (_totalWeight + weight > _options.maxWeight!) {
+        while (_totalWeight + weight > _options.maxWeight! && !isEmpty) {
           _removeLRU();
         }
       }
     }
-  }
-
-  int _getCurrentWeight() {
-    return _cache.values.fold(0, (sum, node) => sum + node.options.weight);
   }
 
   /// Get the value or compute it if absent
@@ -247,6 +250,7 @@ class LruCache<K, V> {
 
     _removeNode(node);
     _cache.remove(key);
+    _totalWeight -= node.options.weight;
     _options.onEvent?.call(CacheEvent(CacheEventType.remove, key, node.value));
     return node.value;
   }
@@ -335,6 +339,7 @@ class LruCache<K, V> {
   /// Remove the least recently used node.
   void _removeLRU() {
     if (_tail != null) {
+      _totalWeight -= _tail!.options.weight;
       _cache.remove(_tail!.key);
       _removeNode(_tail!);
     }
