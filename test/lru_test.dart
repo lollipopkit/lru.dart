@@ -425,5 +425,23 @@ void main() {
       expect(() => cache.removeLeastUsedPercent(-1), throwsArgumentError);
       expect(() => cache.removeLeastUsedPercent(101), throwsArgumentError);
     });
+
+    test('removeWhere functionality', () {
+      final cache = LruCache<String, int>(5);
+      for (var i = 0; i < 5; i++) {
+        cache.put('key$i', i);
+      }
+      
+      // Remove all even values
+      final removedCount = cache.removeWhere((key, value) => value % 2 == 0);
+      
+      expect(removedCount, equals(3)); // Should remove 0, 2, 4
+      expect(cache.length, equals(2)); // Should keep 1, 3
+      expect(cache.fetch('key0'), isNull);
+      expect(cache.fetch('key2'), isNull);
+      expect(cache.fetch('key4'), isNull);
+      expect(cache.fetch('key1'), equals(1));
+      expect(cache.fetch('key3'), equals(3));
+    });
   });
 }

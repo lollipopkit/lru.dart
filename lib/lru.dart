@@ -1,5 +1,5 @@
 /// LRU Cache library.
-library lru;
+library;
 
 export 'src/lru_base.dart' show 
     LruCache,

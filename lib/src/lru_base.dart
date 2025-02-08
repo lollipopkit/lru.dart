@@ -385,6 +385,28 @@ class LruCache<K, V> {
     removeLeastUsed(count);
   }
 
+  /// Removes all entries that satisfy the given [test].
+  /// Returns the number of entries that were removed.
+  int removeWhere(bool Function(K key, V value) test) {
+    int removedCount = 0;
+    final keysToRemove = <K>[];
+    
+    // First collect keys to avoid concurrent modification
+    for (final entry in entries) {
+      if (test(entry.key, entry.value)) {
+        keysToRemove.add(entry.key);
+      }
+    }
+    
+    // Then remove the collected keys
+    for (final key in keysToRemove) {
+      remove(key);
+      removedCount++;
+    }
+    
+    return removedCount;
+  }
+
   /// Get the number of entries in the cache.
   int get length => _cache.length;
 
