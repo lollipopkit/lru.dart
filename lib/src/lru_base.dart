@@ -9,18 +9,42 @@ class Node<K, V> {
   Node(this.key, this.value);
 }
 
-/// A LRU cache implementation.
+/// A LRU cache implementation with enhanced features
 class LRUCache<K, V> {
-  final int capacity;
-  final Map<K, Node<K, V>> _cache = {};
+  int _capacity;
+  final Map<K, Node<K, V>> _cache;
   Node<K, V>? _head;
   Node<K, V>? _tail;
-
-  /// Create a new LRU cache with the given [capacity].
-  LRUCache(this.capacity) {
-    if (capacity <= 0) {
+  
+  /// Create a new LRU cache with the given [capacity]
+  LRUCache(this._capacity) : _cache = {} {
+    if (_capacity <= 0) {
       throw ArgumentError('Capacity must be positive');
     }
+  }
+
+  /// Create a LRU cache from an existing map
+  factory LRUCache.fromMap(Map<K, V> map, {int? capacity}) {
+    final cache = LRUCache<K, V>(capacity ?? map.length);
+    map.forEach(cache.put);
+    return cache;
+  }
+
+  /// Create an empty LRU cache with default capacity
+  factory LRUCache.empty({int capacity = 10}) => LRUCache(capacity);
+
+  /// Get or update capacity
+  int get capacity => _capacity;
+  set capacity(int newCapacity) {
+    if (newCapacity <= 0) {
+      throw ArgumentError('Capacity must be positive');
+    }
+    if (newCapacity < _capacity) {
+      while (_cache.length > newCapacity) {
+        _removeLRU();
+      }
+    }
+    _capacity = newCapacity;
   }
 
   /// Get the value.
@@ -45,10 +69,69 @@ class LRUCache<K, V> {
     _cache[key] = newNode;
     _addToFront(newNode);
 
-    if (_cache.length > capacity) {
+    if (_cache.length > _capacity) {
       _removeLRU();
     }
   }
+
+  /// Get the value or compute it if absent
+  V getOrAdd(K key, V Function() ifAbsent) {
+    final value = fetch(key);
+    if (value != null) return value;
+    
+    final newValue = ifAbsent();
+    put(key, newValue);
+    return newValue;
+  }
+
+  /// Get value asynchronously with a computation function
+  Future<V> getOrAddAsync(K key, Future<V> Function() ifAbsent) async {
+    final value = fetch(key);
+    if (value != null) return value;
+    
+    final newValue = await ifAbsent();
+    put(key, newValue);
+    return newValue;
+  }
+
+  /// Remove an entry from the cache
+  V? remove(K key) {
+    final node = _cache[key];
+    if (node == null) return null;
+    
+    _removeNode(node);
+    _cache.remove(key);
+    return node.value;
+  }
+
+  /// Contains key check
+  bool containsKey(K key) => _cache.containsKey(key);
+
+  /// Update value if exists
+  bool update(K key, V Function(V) update) {
+    final node = _cache[key];
+    if (node == null) return false;
+    
+    node.value = update(node.value);
+    _moveToFront(node);
+    return true;
+  }
+
+  /// Get entries as iterable
+  Iterable<MapEntry<K, V>> get entries sync* {
+    var current = _head;
+    while (current != null) {
+      yield MapEntry(current.key, current.value);
+      current = current.next;
+    }
+  }
+
+  /// Get cache statistics
+  Map<String, num> stats() => {
+    'capacity': capacity,
+    'size': length,
+    'usage': length / capacity,
+  };
 
   /// Move the node to the front of the list.
   void _moveToFront(Node<K, V> node) {
@@ -141,5 +224,16 @@ class LRUCache<K, V> {
       current = current.next;
     }
     return result;
+  }
+
+  /// Create a copy of this cache
+  LRUCache<K, V> copy() {
+    final newCache = LRUCache<K, V>(_capacity);
+    var current = _tail;
+    while (current != null) {
+      newCache.put(current.key, current.value);
+      current = current.prev;
+    }
+    return newCache;
   }
 }

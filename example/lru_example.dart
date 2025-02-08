@@ -1,20 +1,34 @@
 import 'package:lru/lru.dart';
 
-void main() {
-  // Create a LRU cache with capacity of 3
-  final cache = LRUCache<String, int>(3);
+void main() async {
+  // Create from existing map
+  final initial = {'a': 1, 'b': 2, 'c': 3};
+  final cache = LRUCache.fromMap(initial, capacity: 5);
+  print('Initial cache: ${cache.values()}');
+
+  // Use getOrAdd
+  final value = cache.getOrAdd('d', () => 4);
+  print('Added value: $value');
   
-  // Add some entries
-  cache.put('a', 1);
-  cache.put('b', 2);
-  cache.put('c', 3);
-  print('Initial cache: ${cache.values()}'); // [3, 2, 1]
-  
-  // Access 'a' to bring it to front
-  cache.fetch('a');
-  print('After accessing "a": ${cache.values()}'); // [1, 3, 2]
-  
-  // Add new entry when cache is full
-  cache.put('d', 4);
-  print('After adding "d": ${cache.values()}'); // [4, 1, 3]
+  // Async computation
+  final asyncValue = await cache.getOrAddAsync('e', () async {
+    await Future.delayed(Duration(milliseconds: 100));
+    return 5;
+  });
+  print('Async added value: $asyncValue');
+
+  // Update existing value
+  cache.update('a', (v) => v * 2);
+  print('After update: ${cache.toMap()}');
+
+  // Get statistics
+  print('Cache stats: ${cache.stats()}');
+
+  // Create a copy
+  final copy = cache.copy();
+  print('Copy: ${copy.values()}');
+
+  // Adjust capacity
+  cache.capacity = 3;
+  print('After capacity adjustment: ${cache.values()}');
 }
