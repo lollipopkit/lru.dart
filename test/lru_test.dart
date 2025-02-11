@@ -11,10 +11,10 @@ void main() {
       expect(cache.length, equals(1));
 
       cache.put('b', 2);
-      expect(cache.values(), equals([2, 1]));
+      expect(cache.values, equals([2, 1]));
 
       cache.fetch('a');
-      expect(cache.values(), equals([1, 2]));
+      expect(cache.values, equals([1, 2]));
     });
 
     test('capacity enforcement', () {
@@ -25,7 +25,7 @@ void main() {
       cache.put('c', 3);
 
       expect(cache.fetch('a'), isNull);
-      expect(cache.values(), equals([3, 2]));
+      expect(cache.values, equals([3, 2]));
     });
 
     test('update existing value', () {
@@ -35,7 +35,7 @@ void main() {
       cache.put('b', 2);
       cache.put('a', 3);
 
-      expect(cache.values(), equals([3, 2]));
+      expect(cache.values, equals([3, 2]));
       expect(cache.length, equals(2));
     });
 
@@ -49,7 +49,7 @@ void main() {
       expect(cache.isEmpty, isTrue);
       expect(cache.isNotEmpty, isFalse);
       expect(cache.fetch('a'), isNull);
-      expect(cache.values(), isEmpty);
+      expect(cache.values, isEmpty);
     });
 
     test('fromMap constructor', () {
@@ -142,9 +142,9 @@ void main() {
       cache.put('b', 2);
 
       final stats = cache.stats();
-      expect(stats['capacity'], equals(4));
-      expect(stats['size'], equals(2));
-      expect(stats['usage'], equals(0.5));
+      expect(stats.capacity, equals(4));
+      expect(stats.size, equals(2));
+      expect(stats.usage, equals(0.5));
     });
 
     test('copy operation', () {
@@ -153,7 +153,7 @@ void main() {
       original.put('b', 2);
 
       final copy = original.copy();
-      expect(copy.values(), equals(original.values()));
+      expect(copy.values, equals(original.values));
       expect(copy.capacity, equals(original.capacity));
 
       copy.put('c', 3);
@@ -220,15 +220,15 @@ void main() {
 
       // Fetch shouldn't affect order
       cache.fetch('a');
-      expect(cache.values(), equals([3, 2, 1]));
+      expect(cache.values, equals([3, 2, 1]));
 
       // Update shouldn't affect order
       cache.update('b', (v) => v * 2);
-      expect(cache.values(), equals([3, 4, 1]));
+      expect(cache.values, equals([3, 4, 1]));
 
       // Put existing shouldn't affect order
       cache.put('a', 10);
-      expect(cache.values(), equals([3, 4, 10]));
+      expect(cache.values, equals([3, 4, 10]));
     });
 
     test('partial usage options', () {
@@ -247,15 +247,15 @@ void main() {
 
       // Fetch should affect order
       cache.fetch('a');
-      expect(cache.values(), equals([1, 3, 2]));
+      expect(cache.values, equals([1, 3, 2]));
 
       // Update should affect order
       cache.update('b', (v) => v * 2);
-      expect(cache.values(), equals([4, 1, 3]));
+      expect(cache.values, equals([4, 1, 3]));
 
       // Put existing shouldn't affect order
       cache.put('c', 30);
-      expect(cache.values(), equals([4, 1, 30]));
+      expect(cache.values, equals([4, 1, 30]));
     });
 
     test('putNewItemFirst option', () {
@@ -265,7 +265,7 @@ void main() {
       cachePutFirst.put('a', 1);
       cachePutFirst.put('b', 2);
       cachePutFirst.put('c', 3);
-      expect(cachePutFirst.values(), equals([3, 2, 1]));
+      expect(cachePutFirst.values, equals([3, 2, 1]));
 
       final optionsLast = LruOptions<String, int>(putNewItemFirst: false);
       final cachePutLast = LruCache<String, int>(3, options: optionsLast);
@@ -273,7 +273,7 @@ void main() {
       cachePutLast.put('a', 1);
       cachePutLast.put('b', 2);
       cachePutLast.put('c', 3);
-      expect(cachePutLast.values(), equals([1, 2, 3]));
+      expect(cachePutLast.values, equals([1, 2, 3]));
     });
 
     test('entry expiration', () async {
@@ -403,7 +403,7 @@ void main() {
       for (var i = 0; i < 5; i++) {
         cache.put('key$i', i);
       }
-      
+
       // Remove 2 least used items
       cache.removeLeastUsed(2);
       expect(cache.length, equals(3));
@@ -417,11 +417,11 @@ void main() {
       for (var i = 0; i < 10; i++) {
         cache.put('key$i', i);
       }
-      
+
       // Remove 30% of least used items
       cache.removeLeastUsedPercent(30);
       expect(cache.length, equals(7));
-      
+
       expect(() => cache.removeLeastUsedPercent(-1), throwsArgumentError);
       expect(() => cache.removeLeastUsedPercent(101), throwsArgumentError);
     });
@@ -431,10 +431,10 @@ void main() {
       for (var i = 0; i < 5; i++) {
         cache.put('key$i', i);
       }
-      
+
       // Remove all even values
       final removedCount = cache.removeWhere((key, value) => value % 2 == 0);
-      
+
       expect(removedCount, equals(3)); // Should remove 0, 2, 4
       expect(cache.length, equals(2)); // Should keep 1, 3
       expect(cache.fetch('key0'), isNull);

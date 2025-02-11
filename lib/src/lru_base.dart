@@ -299,11 +299,11 @@ class LruCache<K, V> {
   }
 
   /// Get cache statistics
-  Map<String, num> stats() => {
-        'capacity': capacity,
-        'size': length,
-        'usage': length / capacity,
-      };
+  ({int capacity, int size, double usage}) stats() => (
+        capacity: _capacity,
+        size: length,
+        usage: length / _capacity,
+  );
 
   /// Move the node to the front of the list.
   void _moveToFront(_Node<K, V> node) {
@@ -417,7 +417,7 @@ class LruCache<K, V> {
   bool get isNotEmpty => _cache.isNotEmpty;
 
   /// Get all values in the cache.
-  List<V> values() {
+  List<V> get values {
     final result = <V>[];
     var current = _head;
     while (current != null) {
@@ -428,7 +428,7 @@ class LruCache<K, V> {
   }
 
   /// Get all keys in the cache.
-  List<K> keys() {
+  List<K> get keys {
     final result = <K>[];
     var current = _head;
     while (current != null) {
